@@ -39,9 +39,9 @@ def get_logfile_path():
         if isinstance(handler, logging.FileHandler):
             return handler.baseFilename
     return None
-    
-def get_default_config( prefix="", 
-                        output_mode=OutputMode.LOGFILE_WITH_CONSOLE_ERRORS, 
+
+def get_default_config( prefix="",
+                        output_mode=OutputMode.LOGFILE_WITH_CONSOLE_ERRORS,
                         logfile_path=DEFAULT_LOGFILE_PATH):
 
     if output_mode == OutputMode.CONSOLE:
@@ -51,15 +51,15 @@ def get_default_config( prefix="",
     if output_mode == OutputMode.LOGFILE:
         root_handlers = ["rotating_file"]
         warnings_module_handlers = ["rotating_file"]
-    
+
     if output_mode == OutputMode.BOTH:
         root_handlers = ["console", "console_warn", "rotating_file"]
         warnings_module_handlers = ["console_warnings_module", "rotating_file"]
-    
+
     if output_mode == OutputMode.LOGFILE_WITH_CONSOLE_ERRORS:
         root_handlers = ["rotating_file", "console_errors_only"]
         warnings_module_handlers = ["rotating_file"]
-    
+
     default_log_config = {
         "version": 1,
         #"incremental" : False,
@@ -142,12 +142,12 @@ def get_default_config( prefix="",
             "py.warnings":                             {  "level":"WARN", "handlers":warnings_module_handlers, "propagate": False },
 
             "PyQt5": {"level":"INFO"},
-            
+
             # The requests module spits out a lot of INFO messages by default.
             "requests": {"level":"WARN"},
 
             "wsdt": { "level": "INFO" },
-    
+
             # When copying to a json file, remember to remove comments and change True/False to true/false
             "__main__":                                                 { "level":"INFO" },
             "ilastik_main":                                             { "level":"INFO" },
@@ -238,13 +238,13 @@ def init(format_prefix="", output_mode=OutputMode.LOGFILE_WITH_CONSOLE_ERRORS, l
     # Preserve pre-existing handlers
     for handler in original_root_handlers:
         logging.getLogger().addHandler(handler)
-    
+
     # Update from the user's customizations
     loggingHelpers.updateFromConfigFile()
-    
+
     # Capture warnings from the warnings module
     logging.captureWarnings(True)
-    
+
     # Warnings module warnings are shown only once
     warnings.filterwarnings("once")
 
@@ -258,12 +258,12 @@ def init(format_prefix="", output_mode=OutputMode.LOGFILE_WITH_CONSOLE_ERRORS, l
     # Hide all other python converter warnings unless we're in debug mode.
     if not ilastik_config.getboolean("ilastik", "debug"):
         warnings.filterwarnings("ignore", message='.*to-Python converter for .*second conversion method ignored.*', category=RuntimeWarning)
-        
-    
+
+
     # Custom format for warnings
     def simple_warning_format(message, category, filename, lineno, line=None):
         filename = os.path.split(filename)[1]
         return filename + "(" + str(lineno) + "): " + category.__name__ + ": " + message.args[0]
 
     warnings.formatwarning = simple_warning_format
-    
+
