@@ -150,7 +150,7 @@ class NNClassificationWorkflow(Workflow):
         """
         data_instructions = "Select your input data using the 'Raw Data' tab shown on the right"
         return DataSelectionApplet(
-            self, "Input Data", "Input Data", supportIlastik05Import=True, instructionText=data_instructions
+            self, "Input Data", "Input Data", forceAxisOrder=["tczyx"], supportIlastik05Import=True, instructionText=data_instructions
         )
 
     def connectLane(self, laneIndex):
@@ -168,7 +168,7 @@ class NNClassificationWorkflow(Workflow):
 
         # ReorderAxes is needed for specifying the original_shape meta tag , hack!
         op5Pred = OpReorderAxes(parent=self)
-        op5Pred.AxisOrder.setValue("txyzc")
+        op5Pred.AxisOrder.setValue("tczyx")
         op5Pred.Input.connect(opNNclassify.CachedPredictionProbabilities)
 
         # Data Export connections
