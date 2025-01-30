@@ -36,7 +36,7 @@ from qtpy.QtWidgets import (
     QTextBrowser,
     QVBoxLayout,
 )
-from requests.exceptions import SSLError, ConnectionError
+from requests.exceptions import SSLError, ConnectionError as RequestsConnectionError
 
 from lazyflow.utility import isUrl
 from lazyflow.utility.io_util.OMEZarrStore import OMEZarrStore
@@ -81,15 +81,17 @@ class CheckRemoteStoreWorker(QThread):
         try:
             store = self.store_init()
             self.success.emit(store)
-        except Exception as e:
+        except (ConnectionError, RequestsConnectionError) as e:
             if isinstance(e, SSLError):
                 msg = "SSL error, please check that you are using the correct protocol (http/https)."
             elif isinstance(e, ConnectionError):
                 msg = "Connection error, please check that the server is online and the URL is correct."
-            else:
-                msg = "Couldn't load a multiscale dataset at this address."
             msg += f"\n\nMore detail:\n{e}"
             logger.error(e, exc_info=True)
+            self.error.emit(msg)
+        except Exception as e:
+            logger.error(e, exc_info=True)
+            msg = f"Couldn't load a multiscale dataset at this address.\n\nMore detail:\n{e}"
             self.error.emit(msg)
 
 
@@ -181,24 +183,26 @@ class MultiscaleDatasetBrowser(QDialog):
         if uri != text:
             self.combo.lineEdit().setText(uri)
         logger.debug(f"Entered URL: {uri}")
-        # Ask each store type if it likes the URL to avoid web requests during instantiation attempts.
-        if OMEZarrStore.is_uri_compatible(uri):
-            StoreTypeMatchingUri = OMEZarrStore
-            worker = CheckRemoteStoreWorker(self, partial(OMEZarrStore, uri))
-        elif RESTfulPrecomputedChunkedVolume.is_uri_compatible(uri):
+        known_formats_msg = ""
+        if RESTfulPrecomputedChunkedVolume.is_uri_compatible(uri):
             StoreTypeMatchingUri = RESTfulPrecomputedChunkedVolume
             worker = CheckRemoteStoreWorker(self, partial(RESTfulPrecomputedChunkedVolume, volume_url=uri))
+        elif OMEZarrStore.is_uri_probable(uri):
+            StoreTypeMatchingUri = OMEZarrStore
+            worker = CheckRemoteStoreWorker(self, partial(OMEZarrStore, uri))
         else:
+            StoreTypeMatchingUri = OMEZarrStore
+            worker = CheckRemoteStoreWorker(self, partial(OMEZarrStore, uri))
             store_types = [OMEZarrStore, RESTfulPrecomputedChunkedVolume]
             supported_formats = "\n".join(f"<li>{s.NAME} ({s.URI_HINT})</li>" for s in store_types)
-            self.display_error(
-                f"<p>Address does not look like any supported format.</p>"
-                f"<p>Supported formats:</p>"
+            known_formats_msg = (
+                "<p>This address doesn't look like a supported format, but we're trying OME-Zarr anyway.</p>"
+                "<p>Supported formats:</p>"
                 f"<ul>{supported_formats}</ul>"
             )
-            return
         self.result_text_box.setText(
-            f"Trying to load {StoreTypeMatchingUri.NAME} at {uri}.\nThis could take a while if the server or connection is slow."
+            f"<p>Trying to load {StoreTypeMatchingUri.NAME} at {uri}.</p>"
+            f"<p>This could take a while if the server or connection is slow.</p>{known_formats_msg}"
         )
         worker.success.connect(self.display_success)
         worker.error.connect(self.display_error)
