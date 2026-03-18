@@ -635,7 +635,7 @@ class OMEZarrStore(MultiscaleStore):
     @staticmethod
     def is_uri_compatible(uri: str) -> bool:
         supported_ome_zarr_schemes = ["http:", "https:", "file:", "s3:"]
-        return ZARR_EXT in uri and any(uri.startswith(scheme) for scheme in supported_ome_zarr_schemes)
+        return any(uri.startswith(scheme) for scheme in supported_ome_zarr_schemes)
 
     def get_chunk_size(self, scale_key=DEFAULT_SCALE_KEY):
         scale_key = scale_key if scale_key != DEFAULT_SCALE_KEY else self.lowest_resolution_key
