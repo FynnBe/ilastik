@@ -41,7 +41,7 @@ from lazyflow.operators.ioOperators import (
 )
 from lazyflow.utility.jsonConfig import JsonConfigParser
 from lazyflow.utility.pathHelpers import lsH5N5, isRelative, splitPath, PathComponents, isUrl
-from lazyflow.utility.io_util.OMEZarrStore import OMEZarrStore
+from lazyflow.utility.io_util.OMEZarrStore import OMEZarrStore, NoOMEZarrMetaFound
 from .opOMEZarrMultiscaleReader import OpOMEZarrMultiscaleReader
 
 from .opStreamingUfmfReader import OpStreamingUfmfReader
@@ -304,9 +304,12 @@ class OpInputDataReader(Operator):
             filePath = Path(filePath).as_uri()
         if not OMEZarrStore.is_uri_compatible(filePath):
             return ([], None)
-        reader = OpOMEZarrMultiscaleReader(parent=self)
-        reader.Scale.connect(self.ActiveScale)
-        reader.Uri.setValue(filePath)
+        try:
+            reader = OpOMEZarrMultiscaleReader(parent=self)
+            reader.Scale.connect(self.ActiveScale)
+            reader.Uri.setValue(filePath)
+        except NoOMEZarrMetaFound:
+            return [], None
         return [reader], reader.Output
 
     def _attemptOpenAsRESTfulPrecomputedChunkedVolume(self, filePath):
